@@ -1,0 +1,195 @@
+<html>
+
+<head>
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
+</head>
+<style>
+    .main {
+        display: flex;
+    }
+
+    button {
+        background-color: #4CAF50;
+        /* Green */
+        border: none;
+        color: white;
+        padding: 60px 73px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        width: 250px;
+        font-size: 40px;
+        margin: 5px 10px;
+        cursor: pointer;
+    }
+
+    #pause {
+        background-color:chocolate;
+    }
+
+    #config {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+
+        width: 250px;
+        border: 1px solid black;
+
+    }
+</style>
+
+<body>
+    <script>
+        // these are config parameters you can change
+        const intervalMs = 1500
+        const jumpProbability = 0.8 // <1
+        const clickReactTimeMs = 1000  //need to be less than `intervalMs`, otherwise it'll use `intervalMs` as `clickReactTimeMs`
+        const radius = 150
+        const totalNum = 32
+        const ballRadius = 7
+        const ballFillColor = 0xFFFFFF
+
+
+        setTimeout(() => {
+            let t = `
+const intervalMs = ${intervalMs}
+const jumpProbability = ${jumpProbability}
+const clickReactTimeMs = ${clickReactTimeMs}
+const radius = ${radius}
+const totalNum = ${totalNum}
+const ballRadius = ${ballRadius}
+const ballFillColor = ${ballFillColor}
+            `
+            document.getElementById('config').innerHTML = `
+                <div>
+                    這些參數你可以在index.html中看到是可以修改的
+                </div>
+                
+                <pre>
+                ${t}
+                </pre>
+                
+            `
+        }, 500)
+
+        var app = new PIXI.Application(640, 360);
+        document.body.appendChild(app.view);
+        const cx = app.screen.width / 2
+        const cy = app.screen.height / 2
+        for (let i = 0; i < totalNum; i++) {
+            const theta = Math.PI * 2 * (i / totalNum)
+            var circle = new PIXI.Graphics();
+            circle.lineStyle(2, 0xFFFFFF, 1)
+            circle.drawCircle(0, 0, ballRadius);
+            circle.x = cx + radius * Math.cos(theta);
+            circle.y = cy + radius * Math.sin(theta);
+            // console.log('ball ', circle.x, circle.y, i)
+            app.stage.addChild(circle);
+        }
+
+        let center = new PIXI.Graphics()
+        center.x = cx
+        center.y = cy
+        app.stage.addChild(center)
+
+        function drawBall(i) {
+            app.stage.children.map((c, ci) => {
+                c.clear()
+                if (ci == i) {
+                    c.beginFill(ballFillColor);
+                    c.drawCircle(0, 0, ballRadius);
+                    c.endFill()
+                } else if(ci < totalNum ){
+                    c.lineStyle(2, 0xFFFFFF, 1)
+                    c.drawCircle(0, 0, ballRadius);
+                }
+            })
+        }
+
+        function hit() {
+            if(isPause) {
+                return
+            }
+            const t = Date.now()
+            if (!lastJump) {
+                doMiss()
+            } else if (Math.abs(t - lastJump) > Math.min(intervalMs, clickReactTimeMs)) {
+                doMiss()
+            } else {
+                hitCount++
+                lastJump = undefined
+                document.getElementById('hitCount').innerText = hitCount
+                updateRate()
+                center.lineStyle(2, 0x4CAF50, 1)
+                center.drawCircle(0, 0, ballRadius);
+            }
+        }
+
+        function doMiss() {
+            missCount++
+            lastJump = undefined
+            document.getElementById('missCount').innerText = missCount
+            updateRate()
+            center.lineStyle(2, 0xff0000, 1)
+            center.drawCircle(0, 0, ballRadius);
+        }
+        function updateRate() {
+            let r = (hitCount / (missCount + hitCount)) * 100
+            r = Math.round(r * 100)/100
+            document.getElementById('rate').innerText = r + "%"
+        }
+
+        function pause() {
+            isPause = !isPause
+            document.getElementById('pause').innerText = isPause?"Go":"Pause"
+
+        }
+
+        let bI = 0
+        let jumpCount = 0
+        let missCount = 0
+        let hitCount = 0
+        let lastJump = undefined
+        let isPause = false
+        let first = true
+        setInterval(() => {
+            if (lastJump) {
+                doMiss()
+            }
+            if(isPause) {
+                return
+            }
+            bI = (bI + 1) % 32
+            if ((Math.random() < jumpProbability) && !first ) {
+                jumpCount++
+                lastJump = new Date().getTime()
+                document.getElementById('jumpCount').innerText = jumpCount
+                bI = (bI + 1) % 32
+            }
+            drawBall(bI)
+            first = false
+
+        }, intervalMs)
+    </script>
+    <div class="main">
+        <div class="data">
+            <div>jump count:</div>
+            <div id="jumpCount">0</div>
+            <div>miss count:</div>
+            <div id="missCount">0</div>
+            <div>hit count:</div>
+            <div id="hitCount">0</div>
+            <div>Success Rate:</div>
+            <div id="rate">0</div>
+        </div>
+        <div>
+            <button onclick="hit()">Hit</button>
+            <button id="pause" onclick="pause()">Pause</button>
+        </div>
+    </div>
+
+    <div id="config"></div>
+
+</body>
+
+</html>
